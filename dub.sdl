@@ -1,0 +1,12 @@
+name "libraw"
+description "D bindings and binaries to libraw"
+license "LGPL-2.1"
+
+targetType "library"
+
+sourceFiles "lib/windows-x86/libraw.lib" platform="windows-x86"
+copyFiles "lib/windows-x86/libraw.dll" platform="windows-x86"
+sourceFiles "lib/windows-x86_64/libraw.lib" platform="windows-x86_64"
+copyFiles "lib/windows-x86_64/libraw.dll" platform="windows-x86_64"
+sourceFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
+libs ":${PROJECT_DIR}/lib/linux-x86_64/libraw.so" platform="linux-x86_64"
