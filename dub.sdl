@@ -16,4 +16,5 @@ sourceFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
 copyFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
 lflags "-rpath" "@loader_path" platform="osx-x86_64"
 # Linux amd64
-libs ":${PROJECT_DIR}/lib/linux-x86_64/libraw.so" platform="linux-x86_64"
+sourceFiles "lib/linux-x86_64/libraw.so" platform="linux-x86_64"
+copyFiles "lib/linux-x86_64/libraw.so" platform="linux-x86_64"
