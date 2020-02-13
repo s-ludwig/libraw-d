@@ -1,6 +1,7 @@
 name "libraw"
 description "D bindings and binaries to libraw"
 license "LGPL-2.1"
+copyright "Copyright 2008-2019 LibRaw LLC, Copyright 2020 Sönke Ludwig"
 
 targetType "library"
 targetName "raw-d"
