@@ -3,10 +3,17 @@ description "D bindings and binaries to libraw"
 license "LGPL-2.1"
 
 targetType "library"
+targetName "raw-d"
 
+# Windows i386
 sourceFiles "lib/windows-x86/libraw.lib" platform="windows-x86"
 copyFiles "lib/windows-x86/libraw.dll" platform="windows-x86"
+# Windows amd64
 sourceFiles "lib/windows-x86_64/libraw.lib" platform="windows-x86_64"
 copyFiles "lib/windows-x86_64/libraw.dll" platform="windows-x86_64"
+# macOS amd64
 sourceFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
+copyFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
+lflags "-rpath" "@loader_path" platform="osx-x86_64"
+# Linux amd64
 libs ":${PROJECT_DIR}/lib/linux-x86_64/libraw.so" platform="linux-x86_64"
