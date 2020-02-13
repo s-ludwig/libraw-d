@@ -299,31 +299,31 @@ enum LibRaw_sony_cameratypes {
 
 enum LibRaw_KodakSensors
 {
-  LIBRAW_Kodak_UnknownSensor = 0,
-  LIBRAW_Kodak_M1 = 1,
-  LIBRAW_Kodak_M15 = 2,
-  LIBRAW_Kodak_M16 = 3,
-  LIBRAW_Kodak_M17 = 4,
-  LIBRAW_Kodak_M2 = 5,
-  LIBRAW_Kodak_M23 = 6,
-  LIBRAW_Kodak_M24 = 7,
-  LIBRAW_Kodak_M3 = 8,
-  LIBRAW_Kodak_M5 = 9,
-  LIBRAW_Kodak_M6 = 10,
-  LIBRAW_Kodak_C14 = 11,
-  LIBRAW_Kodak_X14 = 12,
-  LIBRAW_Kodak_M11 = 13
-};
+	UnknownSensor = 0,
+	M1 = 1,
+	M15 = 2,
+	M16 = 3,
+	M17 = 4,
+	M2 = 5,
+	M23 = 6,
+	M24 = 7,
+	M3 = 8,
+	M5 = 9,
+	M6 = 10,
+	C14 = 11,
+	X14 = 12,
+	M11 = 13
+}
 
 enum LibRaw_HasselbladFormatCodes {
-  LIBRAW_HF_Unknown = 0,
-  LIBRAW_HF_3FR,
-  LIBRAW_HF_FFF,
-  LIBRAW_HF_Imacon,
-  LIBRAW_HF_HasselbladDNG,
-  LIBRAW_HF_AdobeDNG,
-  LIBRAW_HF_AdobeDNG_fromPhocusDNG
-};
+	Unknown = 0,
+	_3FR,
+	FFF,
+	Imacon,
+	HasselbladDNG,
+	AdobeDNG,
+	AdobeDNG_fromPhocusDNG
+}
 
 enum LibRaw_processing_options {
 	SONYARW2_NONE = 0,
