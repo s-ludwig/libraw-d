@@ -13,9 +13,10 @@ copyFiles "lib/windows-x86/libraw.dll" platform="windows-x86"
 sourceFiles "lib/windows-x86_64/libraw.lib" platform="windows-x86_64"
 copyFiles "lib/windows-x86_64/libraw.dll" platform="windows-x86_64"
 # macOS amd64
-sourceFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
+lflags "-L${PACKAGE_DIR}/lib/macos-x86_64" "-rpath" "." platform="osx-x86_64"
+libs "raw" platform="osx-x86_64"
 copyFiles "lib/macos-x86_64/libraw.dylib" platform="osx-x86_64"
-lflags "-rpath" "@loader_path" platform="osx-x86_64"
 # Linux amd64
-sourceFiles "lib/linux-x86_64/libraw.so" platform="linux-x86_64"
+lflags "-L${PACKAGE_DIR}/lib/linux-x86_64" "-rpath" "." platform="linux-x86_64"
+libs "raw" platform="linux-x86_64"
 copyFiles "lib/linux-x86_64/libraw.so" platform="linux-x86_64"
