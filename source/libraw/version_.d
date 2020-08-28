@@ -5,9 +5,9 @@ import libraw : libraw_versionNumber;
 enum LIBRAW_MAJOR_VERSION = 0;
 enum LIBRAW_MINOR_VERSION = 20;
 enum LIBRAW_PATCH_VERSION = 0;
-enum LIBRAW_VERSION_TAIL = "WorkInProgress";
+enum LIBRAW_VERSION_TAIL = "Release";
 
-enum LIBRAW_SHLIB_CURRENT = 19;
+enum LIBRAW_SHLIB_CURRENT = 20;
 enum LIBRAW_SHLIB_REVISION = 0;
 enum LIBRAW_SHLIB_AGE = 0;
 

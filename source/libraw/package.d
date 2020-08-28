@@ -85,7 +85,7 @@ extern (C) {
 	float libraw_get_pre_mul(libraw_data_t *lr, int index);
 	float libraw_get_rgb_cam(libraw_data_t *lr, int index1, int index2);
 	int libraw_get_color_maximum(libraw_data_t *lr);
-
+	void libraw_set_output_tif(libraw_data_t* lr, int value);
 	libraw_iparams_t *libraw_get_iparams(libraw_data_t *lr);
 	libraw_lensinfo_t *libraw_get_lensinfo(libraw_data_t *lr);
 	libraw_imgother_t *libraw_get_imgother(libraw_data_t *lr);
@@ -226,7 +226,7 @@ extern (C) {
 		void copy_bayer(ushort/*[4]*/* cblack, ushort *dmaxp);
 		void fuji_rotate();
 		void convert_to_rgb_loop(float[4]/*[3]*/* out_cam);
-		void lin_interpolate_loop(int[32][16]/*[16]*/* code, int size);
+		void lin_interpolate_loop(int* code, int size);
 		void scale_colors_loop(float/*[4]*/* scale_mul);
 		void fuji_decode_loop(const(fuji_compressed_params)* common_info, int count, long *offsets,
 																	uint *sizes);+/
@@ -275,8 +275,10 @@ extern (C) {
 
 		final void kodak_thumb_loader();
 		final void write_thumb_ppm_tiff(/*FILE*/void *);
+		#ifdef USE_X3FTOOLS
 		final void x3f_thumb_loader();
 		final long x3f_thumb_size();
+		#endif
 
 		final int own_filtering_supported() { return 0; }
 		final void identify();

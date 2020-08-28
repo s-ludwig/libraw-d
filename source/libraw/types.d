@@ -219,9 +219,11 @@ extern (C)
 		int   AFMicroAdjMode;
 		float AFMicroAdjValue;
 		short MakernotesFlip;
+		short RecordMode;
 		short SRAWQuality;
 		uint wbi;
-		short ColorSpace;
+		float firmware;
+		short RF_lensID;
 	}
 
 	struct libraw_hasselblad_makernotes_t {
@@ -271,6 +273,9 @@ extern (C)
 		ushort DynamicRangeSetting;
 		ushort DevelopmentDynamicRange;
 		ushort AutoDynamicRange;
+		ushort DRangePriority;
+		ushort DRangePriorityAuto;
+		ushort DRangePriorityFixed;
 
 		/*
 		tag 0x9200, converted to BrightnessCompensation
@@ -584,6 +589,7 @@ extern (C)
 											7    Never seen
 											8    Name unknown
 											*/
+		int ExifColorSpace;
 	}
 
 	struct libraw_thumbnail_t {
@@ -596,7 +602,7 @@ extern (C)
 
 	struct libraw_gps_info_t {
 		float[3] latitude;     /* Deg,min,sec */
-		float[3] longtitude;   /* Deg,min,sec */
+		float[3] longitude;    /* Deg,min,sec */
 		float[3] gpstimestamp; /* Deg,min,sec */
 		float altitude;
 		char altref, latref, longref, gpsstatus;
@@ -634,6 +640,8 @@ extern (C)
 		float exifCameraElevationAngle;
 		float real_ISO;
 		float exifExposureIndex;
+		ushort ColorSpace;
+		char[128] firmware;
 	}
 
 	struct libraw_output_params_t {
@@ -834,6 +842,28 @@ extern (C)
 		int total_values;
 		int maxDiff;
 		ushort line_width;
+	}
+
+	struct libraw_static_table_t
+	{
+		this(const(int)* a, const(uint) s) {
+			data = a;
+			_size = s;
+		}
+		this(ref const(libraw_static_table_t) s) {
+			data = s.data;
+			_size = s._size;
+		}
+		uint size() const { return _size; }
+		int opIndex(uint idx) const
+		{
+			if (idx < _size) return data[idx];
+			if(_size>0 && data) return data[0];
+			return 0;
+		}
+	private:
+		const(int)* data;
+		uint _size;
 	}
 }
 

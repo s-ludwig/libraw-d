@@ -66,6 +66,7 @@ version (USE_DNGSDK) {
 		abstract int eof();
 		abstract void *make_jas_stream();
 		int jpeg_src(void*);
+		void buffering_off() {}
 		int lock();
 		void unlock();
 		const(char)* fname();
@@ -107,7 +108,6 @@ public:
 	LibRaw_file_datastream(const wchar_t *fname);
 #endif
 	virtual void *make_jas_stream();
-	virtual int jpeg_src(void *jpegdata);
 	virtual int valid();
 	virtual int read(void *ptr, size_t size, size_t nmemb);
 	virtual int eof();
@@ -169,7 +169,6 @@ public:
 #endif
 	virtual ~LibRaw_bigfile_datastream();
 	virtual int valid();
-	virtual int jpeg_src(void *jpegdata);
 	virtual void *make_jas_stream();
 
 	virtual int read(void *ptr, size_t size, size_t nmemb);
@@ -241,6 +240,7 @@ public:
 	{
 		if (parent_stream)
 		{
+			parent_stream->buffering_off();
 			off = parent_stream->tell();
 			parent_stream->seek(0UL, SEEK_SET); /* seek to start */
 		}
