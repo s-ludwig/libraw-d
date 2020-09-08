@@ -12,7 +12,7 @@ sourceFiles "lib/windows-x86/libraw.lib" platform="windows-x86"
 sourceFiles "lib/windows-x86_64/libraw.lib" platform="windows-x86_64"
 # macOS amd64
 lflags "-L${PACKAGE_DIR}/lib/macos-x86_64" platform="osx-x86_64"
-libs "raw_r" platform="osx-x86_64"
+libs "raw_r" "c++" platform="osx-x86_64"
 # Linux amd64
 lflags "-L${PACKAGE_DIR}/lib/linux-x86_64" platform="linux-x86_64"
-libs "raw_r" platform="linux-x86_64"
+libs "raw_r" "c++" platform="linux-x86_64"
