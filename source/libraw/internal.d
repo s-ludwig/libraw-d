@@ -5,8 +5,8 @@ import libraw.types;
 
 import core.stdc.stdio;
 
-extern(C++) class LibRaw_TLS;
-extern(C++) class LibRaw_constants;
+//extern(C++) class LibRaw_TLS;
+//extern(C++) class LibRaw_constants;
 
 /+#ifdef __cplusplus
 
