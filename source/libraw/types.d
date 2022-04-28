@@ -4,7 +4,8 @@ import libraw.const_;
 import libraw.version_;
 
 import core.sys.posix.sys.types;
-import core.sys.posix.sys.time;
+version (Windows) alias time_t = ulong;
+else import core.sys.posix.sys.time;
 import core.stdc.stdio;
 import core.stdc.stdint;
 import core.stdc.config;
@@ -110,7 +111,7 @@ extern (C)
 	}
 
 	struct libraw_raw_inset_crop_t {
-		ushort cleft, ctop, cwidth, cheight, aspect;
+		ushort cleft, ctop, cwidth, cheight;
 	}
 
 	struct libraw_image_sizes_t {
@@ -120,7 +121,12 @@ extern (C)
 		double pixel_aspect;
 		int flip;
 		int[4][8] mask;
-		libraw_raw_inset_crop_t raw_inset_crop;
+    	ushort raw_aspect;
+    	libraw_raw_inset_crop_t[2] raw_inset_crops;
+	}
+
+	struct libraw_area_t {
+		short t,l,b,r; // top, left, bottom, right pixel coordinates, (0,0) is top left pixel;
 	}
 
 	struct ph1_t
@@ -145,7 +151,8 @@ extern (C)
 		float[LIBRAW_CBLACK_SIZE] dng_fcblack;
 		float dng_fblack;
 		uint[4] dng_whitelevel;
-		uint[4] default_crop; /* Origin and size */
+		ushort[4] default_crop; /* Origin and size */
+		float[4] user_crop; // top-left-bottom-right relative to default_crop
 		uint preview_colorspace;
 		float[4] analogbalance;
 		float[4] asshotneutral;
@@ -173,29 +180,8 @@ extern (C)
 		short FlashExposureLock;
 		short ExposureMode;
 		short AESetting;
-		ubyte HighlightTonePriority;
 		/* stabilization */
 		short ImageStabilization;
-		/* focus */
-		short FocusMode;
-		short AFPoint;
-		short FocusContinuous;
-		short AFPointsInFocus30D;
-		ubyte[8] AFPointsInFocus1D;
-		ushort AFPointsInFocus5D; /* bytes in reverse*/
-															/* AFInfo */
-		ushort AFAreaMode;
-		ushort NumAFPoints;
-		ushort ValidAFPoints;
-		ushort AFImageWidth;
-		ushort AFImageHeight;
-		short[61] AFAreaWidths;     /* cycle to NumAFPoints */
-		short[61] AFAreaHeights;    /* --''--               */
-		short[61] AFAreaXPositions; /* --''--               */
-		short[61] AFAreaYPositions; /* --''--               */
-		short[4] AFPointsInFocus;   /* cycle to floor((NumAFPoints+15)/16) */
-		short[4] AFPointsSelected;  /* --''--               */
-		ushort PrimaryAFPoint;
 		/* flash */
 		short FlashMode;
 		short FlashActivity;
@@ -208,22 +194,34 @@ extern (C)
 		/* sensor */
 		short SensorWidth;
 		short SensorHeight;
-		short SensorLeftBorder;
-		short SensorTopBorder;
-		short SensorRightBorder;
-		short SensorBottomBorder;
-		short BlackMaskLeftBorder;
-		short BlackMaskTopBorder;
-		short BlackMaskRightBorder;
-		short BlackMaskBottomBorder;
+
 		int   AFMicroAdjMode;
 		float AFMicroAdjValue;
 		short MakernotesFlip;
 		short RecordMode;
 		short SRAWQuality;
 		uint wbi;
-		float firmware;
 		short RF_lensID;
+		int AutoLightingOptimizer;
+		int HighlightTonePriority;
+
+		/* -1 = n/a            1 = Economy
+		    2 = Normal         3 = Fine
+		    4 = RAW            5 = Superfine
+		    7 = CRAW         130 = Normal Movie, CRM LightRaw
+		  131 = CRM  StandardRaw */
+		short Quality;
+		/* Increases dynamic range of sensor data
+		    0 = OFF  1 = CLogV1 2 = CLogV2? 3 = CLogV3 */
+		int CanonLog;
+
+		libraw_area_t DefaultCropAbsolute;
+		libraw_area_t RecommendedImageArea;   // contains the image in proper aspect ratio?
+		libraw_area_t LeftOpticalBlack;       // use this, when present, to estimate black levels?
+		libraw_area_t UpperOpticalBlack;
+		libraw_area_t ActiveArea;
+
+		short[2] ISOgain; // AutoISO & BaseISO per ExifTool
 	}
 
 	struct libraw_hasselblad_makernotes_t {
@@ -287,6 +285,10 @@ extern (C)
 		ushort FocusMode;
 		ushort AFMode;
 		ushort[2] FocusPixel;
+		ushort PrioritySettings;
+		uint FocusSettings;
+		uint AF_C_Settings;
+		ushort FocusWarning;
 		ushort[3] ImageStabilization;
 		ushort FlashMode;
 		ushort WB_Preset;
@@ -308,11 +310,10 @@ extern (C)
 			 4 - 1.25x crop (electronic shutter, continuous high)
 		*/
 		ushort CropMode;
-		ushort FrameRate;
-		ushort FrameWidth;
-		ushort FrameHeight;
 		char[0x0c + 1]   SerialSignature;
+		char[4 + 1]   SensorID;
 		char[4 + 1]   RAFVersion;
+		int    RAFDataGeneration; // 0 (none), 1..4, 4096
 		ushort RAFDataVersion;
 		int    isTSNERDTS;
 
@@ -322,6 +323,23 @@ extern (C)
 			 2 - continuous high
 		*/
 		short DriveMode;
+
+		/*
+		tag 0x4000 BlackLevel:
+		S9100, S9000, S7000, S6000fd, S5200, S5100, S5000,
+		S5Pro, S3Pro, S2Pro, S20Pro,
+		S200EXR, S100FS,
+		F810, F700,
+		E900, E550,
+		DBP, and aliases for all of the above
+		*/
+		ushort[9] BlackLevel;
+		uint[32] RAFData_ImageSizeTable;
+		int AutoBracketing;
+		int SequenceNumber;
+		int SeriesLength;
+		float[2] PixelShiftOffset;
+		int ImageCount;
 	}
 
 	struct libraw_sensor_highspeed_crop_t {
@@ -336,22 +354,6 @@ extern (C)
 		ubyte[7] ImageStabilization;
 		ubyte VibrationReduction;
 		ubyte VRMode;
-		/* focus */
-		char[7] FocusMode;
-		ubyte AFPoint;
-		ushort AFPointsInFocus;
-		ubyte ContrastDetectAF;
-		ubyte AFAreaMode;
-		ubyte PhaseDetectAF;
-		ubyte PrimaryAFPoint;
-		ubyte[29] AFPointsUsed;
-		ushort AFImageWidth;
-		ushort AFImageHeight;
-		ushort AFAreaXPposition;
-		ushort AFAreaYPosition;
-		ushort AFAreaWidth;
-		ushort AFAreaHeight;
-		ubyte ContrastDetectAFInFocus;
 		/* flash */
 		char[13] FlashSetting;
 		char[20] FlashType;
@@ -372,7 +374,21 @@ extern (C)
 		ubyte[4] FlashGroupControlMode;
 		ubyte[4] FlashGroupOutputAndCompensation;
 		ubyte FlashColorFilter;
+
+/* NEF compression, comments follow those for ExifTool tag 0x0093:
+	 1: Lossy (type 1)
+	 2: Uncompressed
+	 3: Lossless
+	 4: Lossy (type 2)
+	 5: Striped packed 12-bit
+	 6: Uncompressed (14-bit reduced to 12-bit)
+	 7: Unpacked 12-bit
+	 8: Small raw
+	 9: Packed 12-bit
+	10: Packed 14-bit
+*/
 		ushort NEFCompression;
+
 		int    ExposureMode;
 		int    ExposureProgram;
 		int    nMEshots;
@@ -392,21 +408,40 @@ extern (C)
 		libraw_sensor_highspeed_crop_t SensorHighSpeedCrop;
 		ushort SensorWidth;
 		ushort SensorHeight;
+		ushort Active_D_Lighting;
+		uint ShotInfoVersion;
+		short MakernotesFlip;
+		double RollAngle;  // positive is clockwise, CW
+		double PitchAngle; // positive is upwords
+		double YawAngle;   // positive is to the right
 	}
 
 	struct libraw_olympus_makernotes_t {
+		char[6]  CameraType2;
+		ushort   ValidBits;
 		int[2]   SensorCalibration;
+		ushort[5] DriveMode;
+		ushort   ColorSpace;
 		ushort[2] FocusMode;
 		ushort   AutoFocus;
 		ushort   AFPoint;
 		uint[64] AFAreas;
 		double[5] AFPointSelected;
 		ushort   AFResult;
-		ushort[5] DriveMode;
-		ushort   ColorSpace;
 		ubyte    AFFineTune;
 		short[3] AFFineTuneAdj;
-		char[6]  CameraType2;
+		uint[3]  SpecialMode;
+		ushort   ZoomStepCount;
+		ushort   FocusStepCount;
+		ushort   FocusStepInfinity;
+		ushort   FocusStepNear;
+		double   FocusDistance;
+		ushort[4] AspectFrame; // left, top, width, height
+		uint[2]  StackedImage;
+		ubyte    isLiveND;
+		uint     LiveNDfactor;
+		ushort   Panorama_mode;
+		ushort   Panorama_frameNum;
 	}
 
 	struct libraw_panasonic_makernotes_t {
@@ -423,21 +458,44 @@ extern (C)
 		uint     Multishot; /* 0 is Off, 65536 is Pixel Shift */
 		float    gamma;
 		int[3]   HighISOMultiplier; /* 0->R, 1->G, 2->B */
+		short    FocusStepNear;
+		short    FocusStepCount;
+		uint     ZoomPosition;
+		uint     LensManufacturer;
 	}
 
 	struct libraw_pentax_makernotes_t {
-		ushort   FocusMode;
-		ushort   AFPointSelected;
+		ubyte[4] DriveMode;
+		ushort[2] FocusMode;
+		ushort[2] AFPointSelected;
+		ushort   AFPointSelected_Area;
+		int      AFPointsInFocus_version;
 		uint     AFPointsInFocus;
 		ushort   FocusPosition;
-		ubyte[4] DriveMode;
 		short    AFAdjustment;
+		ubyte    AFPointMode;
 		ubyte    MultiExposure; /* last bit is not "1" if ME is not used */
 		ushort   Quality; /* 4 is raw, 7 is raw w/ pixel shift, 8 is raw w/ dynamic
 											 pixel shift */
-		/*    uchar AFPointMode;     */
-		/*    uchar SRResult;        */
-		/*    uchar ShakeReduction;  */
+	}
+
+	struct libraw_ricoh_makernotes_t {
+		ushort   AFStatus;
+		uint[2]  AFAreaXPosition;
+		uint[2]  AFAreaYPosition;
+		ushort   AFAreaMode;
+		uint     SensorWidth;
+		uint     SensorHeight;
+		uint     CroppedImageWidth;
+		uint     CroppedImageHeight;
+		ushort   WideAdapter;
+		ushort   CropMode;
+		ushort   NDFilter;
+		ushort   AutoBracketing;
+		ushort   MacroMode;
+		ushort   FlashMode;
+		double   FlashExposureComp;
+		double   ManualFlashOutput;
 	}
 
 	struct libraw_samsung_makernotes_t {
@@ -475,38 +533,50 @@ extern (C)
 	}
 
 	struct libraw_sony_info_t {
-		ushort   CameraType;
-		ubyte    Sony0x9400_version; /* 0 if not found/deciphered, 0xa, 0xb, 0xc
-																 following exiftool convention */
+		/* afdata:
+		  0x0010 CameraInfo
+		  0x2020 AFPointsUsed
+		  0x2022 FocalPlaneAFPointsUsed
+		  0x202a Tag202a
+		  0x940e AFInfo
+		*/
+		ushort   CameraType;                      // init in 0xffff
+		ubyte    Sony0x9400_version; /* 0 if not found/deciphered,
+		                            0xa, 0xb, 0xc following exiftool convention */
 		ubyte    Sony0x9400_ReleaseMode2;
 		uint     Sony0x9400_SequenceImageNumber;
 		ubyte    Sony0x9400_SequenceLength1;
 		uint     Sony0x9400_SequenceFileNumber;
 		ubyte    Sony0x9400_SequenceLength2;
-		uint8_t  AFAreaModeSetting;
-		ushort[2] FlexibleSpotPosition;
-		uint8_t  AFPointSelected;
+		uint8_t  AFAreaModeSetting;               // init in 0xff; +
+		uint16_t AFAreaMode;                      // init in 0xffff; +
+		ushort[2] FlexibleSpotPosition;           // init in (0xffff, 0xffff)
+		uint8_t  AFPointSelected;                 // init in 0xff
+		uint8_t  AFPointSelected_0x201e;          // init in 0xff
+	    short    nAFPointsUsed;
 		uint8_t[10] AFPointsUsed;
-		uint8_t  AFTracking;
+		uint8_t  AFTracking;                      // init in 0xff
 		uint8_t  AFType;
 		ushort[4] FocusLocation;
-		int8_t   AFMicroAdjValue;
-		int8_t   AFMicroAdjOn;
-		ubyte    AFMicroAdjRegisteredLenses;
+		ushort   FocusPosition;                    // init in 0xffff
+		int8_t   AFMicroAdjValue;                  // init in 0x7f
+		int8_t   AFMicroAdjOn;                     // init in -1
+		ubyte    AFMicroAdjRegisteredLenses;       // init in 0xff
 		ushort   VariableLowPassFilter;
-		uint      LongExposureNoiseReduction;
-		ushort   HighISONoiseReduction;
+		uint     LongExposureNoiseReduction;      // init in 0xffffffff
+		ushort   HighISONoiseReduction;           // init in 0xffff
 		ushort[2] HDR;
 		ushort   group2010;
-		ushort   real_iso_offset;
+		ushort   group9050;
+		ushort   real_iso_offset;                 // init in 0xffff
 		ushort   MeteringMode_offset;
 		ushort   ExposureProgram_offset;
 		ushort   ReleaseMode2_offset;
-		uint     MinoltaCamID;
+	    uint     MinoltaCamID;                    // init in 0xffffffff
 		float    firmware;
-		ushort   ImageCount3_offset;
+		ushort   ImageCount3_offset;              // init in 0xffff
 		uint     ImageCount3;
-		uint     ElectronicFrontCurtainShutter;
+		uint     ElectronicFrontCurtainShutter;   // init in 0xffffffff
 		ushort   MeteringMode2;
 		char[20] SonyDateTime;
 		uint     ShotNumberSincePowerUp;
@@ -516,31 +586,41 @@ extern (C)
 		char     numInPixelShiftGroup; /* '0' if ARQ, first shot in the group has '1'
 																	here */
 		ushort   prd_ImageHeight, prd_ImageWidth;
-		ushort   prd_RawBitDepth;
+		ushort   prd_Total_bps;
+		ushort   prd_Active_bps;
 		ushort   prd_StorageMethod; /* 82 -> Padded; 89 -> Linear */
 		ushort   prd_BayerPattern;  /* 0 -> not valid; 1 -> RGGB; 4 -> GBRG */
 
-		ushort   SonyRawFileType; /* takes precedence over RAWFileType and Quality:
-															 0  for uncompressed 14-bit raw
-															 1  for uncompressed 12-bit raw
-															 2  for compressed raw
-															 3  for lossless compressed raw
-														*/
-		ushort RAWFileType;     /* takes precedence over Quality
-															 0 for compressed raw, 1 for uncompressed;
-														*/
-		uint   Quality;       /* 0 or 6 for raw, 7 or 8 for compressed raw */
+		ushort   SonyRawFileType; /* init in 0xffff
+		                           valid for ARW 2.0 and up (FileFormat >= 3000)
+		                           takes precedence over RAWFileType and Quality:
+		                           0  for uncompressed 14-bit raw
+		                           1  for uncompressed 12-bit raw
+		                           2  for compressed raw (lossy)
+		                           3  for lossless compressed raw
+		                           4  for lossless compressed raw v.2 (ILCE-1)
+		                        */
+		ushort RAWFileType;     /* init in 0xffff
+		                           takes precedence over Quality
+		                           0 for compressed raw,
+		                           1 for uncompressed;
+		                           2 lossless compressed raw v.2
+		                        */
+		uint Quality;           /* init in 0xffffffff
+		                           0 or 6 for raw, 7 or 8 for compressed raw */
 		ushort FileFormat;      /*  1000 SR2
-																2000 ARW 1.0
-																3000 ARW 2.0
-																3100 ARW 2.1
-																3200 ARW 2.2
-																3300 ARW 2.3
-																3310 ARW 2.3.1
-																3320 ARW 2.3.2
-																3330 ARW 2.3.3
-																3350 ARW 2.3.5
-														 */
+		                            2000 ARW 1.0
+		                            3000 ARW 2.0
+		                            3100 ARW 2.1
+		                            3200 ARW 2.2
+		                            3300 ARW 2.3
+		                            3310 ARW 2.3.1
+		                            3320 ARW 2.3.2
+		                            3330 ARW 2.3.3
+		                            3350 ARW 2.3.5
+		                            4000 ARW 4.0
+		                         */
+		char[16] MetaVersion;
 	}
 
 	struct libraw_colordata_t {
@@ -549,7 +629,23 @@ extern (C)
 		uint black;
 		uint data_maximum;
 		uint maximum;
+
+// Canon (SpecularWhiteLevel)
+// Kodak (14N, 14nx, SLR/c/n, DCS720X, DCS760C, DCS760M, ProBack, ProBack645, P712, P880, P850)
+// Olympus, except:
+//	C5050Z, C5060WZ, C7070WZ, C8080WZ
+//	SP350, SP500UZ, SP510UZ, SP565UZ
+//	E-10, E-20
+//	E-300, E-330, E-400, E-410, E-420, E-450, E-500, E-510, E-520
+//	E-1, E-3
+//	XZ-1
+// Panasonic
+// Pentax
+// Sony
+// and aliases of the above
+// DNG
 		c_long[4] linear_max;
+
 		float fmaximum;
 		float fnorm;
 		ushort[8][8] white;
@@ -582,12 +678,12 @@ extern (C)
 											0    Name unknown
 											1    "RAW 1"
 											2    "RAW 2"
-											3    "IIQ L"
+											3    "IIQ L" (IIQ L14)
 											4    Never seen
 											5    "IIQ S"
-											6    "IIQ S v.2"
+											6    "IIQ Sv2" (S14 / S14+)
 											7    Never seen
-											8    Name unknown
+											8    "IIQ L16" (IIQ L16EX / IIQ L16)
 											*/
 		int ExifColorSpace;
 	}
@@ -623,6 +719,14 @@ extern (C)
 		float[4] analogbalance;
 	}
 
+	struct libraw_afinfo_item_t {
+		uint     AFInfoData_tag;
+		short    AFInfoData_order;
+		uint     AFInfoData_version;
+		uint     AFInfoData_length;
+		ubyte*   AFInfoData;
+	}
+
 	struct libraw_metadata_common_t {
 		float FlashEC;
 		float FlashGN;
@@ -642,7 +746,10 @@ extern (C)
 		float exifExposureIndex;
 		ushort ColorSpace;
 		char[128] firmware;
-	}
+	    float ExposureCalibrationShift;
+		libraw_afinfo_item_t[LIBRAW_AFDATA_MAXCOUNT] afdata;
+		int afcount;
+}
 
 	struct libraw_output_params_t {
 		uint[4] greybox;       /* -A  x1 y1 x2 y2 */
@@ -650,7 +757,6 @@ extern (C)
 		double[4] aber;        /* -C */
 		double[6] gamm;        /* -g */
 		float[4] user_mul;     /* -r mul0 mul1 mul2 mul3 */
-		uint shot_select;  /* -s */
 		float bright;          /* -b */
 		float threshold;       /* -n */
 		int half_size;         /* -h */
@@ -666,6 +772,7 @@ extern (C)
 		char *dark_frame;      /* -K */
 		int output_bps;        /* -4 */
 		int output_tiff;       /* -T */
+		int output_flags;
 		int user_flip;         /* -t */
 		int user_qual;         /* -q */
 		int user_black;        /* -k */
@@ -684,25 +791,27 @@ extern (C)
 		int exp_correc;
 		float exp_shift;
 		float exp_preser;
+		/* Disable Auto-scale */
+		int no_auto_scale;
+		/* Disable interpolation */
+		int no_interpolation;
+	}
+
+	struct libraw_raw_unpack_params_t {
 		/* Raw speed */
 		int use_rawspeed;
 		/* DNG SDK */
 		int use_dngsdk;
-		/* Disable Auto-scale */
-		int no_auto_scale;
-		/* Disable intepolation */
-		int no_interpolation;
-		/*  int x3f_flags; */
-		/* Sony ARW2 digging mode */
-		/* int sony_arw2_options; */
-		uint raw_processing_options;
+		uint options;
+		uint shot_select;  /* -s */
+		uint specials;
 		uint max_raw_memory_mb;
 		int sony_arw2_posterization_thr;
 		/* Nikon Coolscan */
 		float coolscan_nef_gamma;
 		char[5] p4shot_order;
 		/* Custom camera list */
-		char **custom_camera_strings;
+		char** custom_camera_strings;
 	}
 
 	struct libraw_rawdata_t {
@@ -756,7 +865,7 @@ extern (C)
 		char[128] Adapter;
 		ulong AttachmentID;
 		char[128] Attachment;
-		ushort CanonFocalUnits;
+		ushort FocalUnits;
 		float FocalLengthIn35mmFormat;
 	}
 
@@ -789,6 +898,7 @@ extern (C)
 		libraw_panasonic_makernotes_t panasonic;
 		libraw_pentax_makernotes_t pentax;
 		libraw_p1_makernotes_t phaseone;
+		libraw_ricoh_makernotes_t ricoh;
 		libraw_samsung_makernotes_t samsung;
 		libraw_metadata_common_t common;
 	}
@@ -824,6 +934,7 @@ extern (C)
 		libraw_makernotes_t makernotes;
 		libraw_shootinginfo_t shootinginfo;
 		libraw_output_params_t params;
+		libraw_raw_unpack_params_t rawparams;
 		uint progress_flags;
 		uint process_warnings;
 		libraw_colordata_t color;
@@ -833,14 +944,21 @@ extern (C)
 		void *parent_class;
 	}
 
-	struct fuji_compressed_params {
-		int8_t *q_table; /* quantization table */
-		int[5] q_point;  /* quantization points */
-		int max_bits;
-		int min_value;
+	struct fuji_q_table {
+		int8_t* q_table; /* quantization table */
 		int raw_bits;
 		int total_values;
-		int maxDiff;
+		int max_grad;    // sdp val
+		int q_grad_mult; // quant_gradient multiplier
+		int q_base;
+	}
+
+	struct fuji_compressed_params {
+		fuji_q_table[4] qt;
+		void* buf;
+		int max_bits;
+		int min_value;
+		int max_value;   // q_point[4]
 		ushort line_width;
 	}
 
@@ -869,3 +987,53 @@ extern (C)
 
 static import std.system;
 enum LibRawBigEndian = std.system.endian == std.system.Endian.bigEndian;
+
+
+// sanity check struct sizes to match the C/C++ side
+version (Win64) {
+	static assert(libraw_decoder_info_t.sizeof == 16);
+	static assert(libraw_internal_output_params_t.sizeof == 16);
+	static assert(libraw_callbacks_t.sizeof == 152);
+	static assert(libraw_abstract_datastream_t.sizeof == 88);
+	static assert(libraw_processed_image_t.sizeof == 20);
+	static assert(libraw_iparams_t.sizeof == 440);
+	static assert(libraw_raw_inset_crop_t.sizeof == 8);
+	static assert(libraw_image_sizes_t.sizeof == 184);
+	static assert(libraw_area_t.sizeof == 8);
+	static assert(ph1_t.sizeof == 36);
+	static assert(libraw_dng_color_t.sizeof == 168);
+	static assert(libraw_dng_levels_t.sizeof == 32928);
+	static assert(libraw_P1_color_t.sizeof == 36);
+	static assert(libraw_canon_makernotes_t.sizeof == 168);
+	static assert(libraw_hasselblad_makernotes_t.sizeof == 384);
+	static assert(libraw_fuji_info_t.sizeof == 280);
+	static assert(libraw_sensor_highspeed_crop_t.sizeof == 8);
+	static assert(libraw_nikon_makernotes_t.sizeof == 224);
+	static assert(libraw_olympus_makernotes_t.sizeof == 408);
+	static assert(libraw_panasonic_makernotes_t.sizeof == 68);
+	static assert(libraw_pentax_makernotes_t.sizeof == 32);
+	static assert(libraw_ricoh_makernotes_t.sizeof == 72);
+	static assert(libraw_samsung_makernotes_t.sizeof == 136);
+	static assert(libraw_kodak_makernotes_t.sizeof == 244);
+	static assert(libraw_p1_makernotes_t.sizeof == 448);
+	static assert(libraw_sony_info_t.sizeof == 180);
+	static assert(libraw_colordata_t.sizeof == 187032);
+	static assert(libraw_thumbnail_t.sizeof == 24);
+	static assert(libraw_gps_info_t.sizeof == 48);
+	static assert(libraw_imgother_t.sizeof == 800);
+	static assert(libraw_afinfo_item_t.sizeof == 24);
+	static assert(libraw_metadata_common_t.sizeof == 304);
+	static assert(libraw_output_params_t.sizeof == 304);
+	static assert(libraw_raw_unpack_params_t.sizeof == 48);
+	static assert(libraw_rawdata_t.sizeof == 187744);
+	static assert(libraw_makernotes_lens_t.sizeof == 736);
+	static assert(libraw_nikonlens_t.sizeof == 8);
+	static assert(libraw_dnglens_t.sizeof == 16);
+	static assert(libraw_lensinfo_t.sizeof == 1296);
+	static assert(libraw_makernotes_t.sizeof == 2952);
+	static assert(libraw_shootinginfo_t.sizeof == 142);
+	static assert(libraw_custom_camera_t.sizeof == 52);
+	static assert(libraw_data_t.sizeof == 380992);
+	static assert(fuji_q_table.sizeof == 32);
+	static assert(fuji_compressed_params.sizeof == 152);
+}

@@ -7,6 +7,18 @@ static if (!is(typeof(LIBRAW_MAX_ALLOC_MB_DEFAULT))) {
 	enum LIBRAW_MAX_ALLOC_MB_DEFAULT = 2048L;
 }
 
+
+static if (!is(typeof(LIBRAW_MAX_NONDNG_RAW_FILE_SIZE))) {
+	enum LIBRAW_MAX_NONDNG_RAW_FILE_SIZE = 2147483647UL;
+}
+
+static if (!is(typeof(LIBRAW_MAX_DNG_RAW_FILE_SIZE))) {
+version (USE_DNGSDK)
+	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 4294967295UL;
+else
+	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 2147483647UL;
+}
+
 static if (!is(typeof(LIBRAW_MAX_THUMBNAIL_MB_DEFAULT))) {
 	enum LIBRAW_MAX_THUMBNAIL_MB_DEFAULT = 512L;
 }
@@ -28,13 +40,18 @@ enum LIBRAW_MAX_METADATA_BLOCKS = 1024;
 enum LIBRAW_CBLACK_SIZE = 4104;
 enum LIBRAW_IFD_MAXCOUNT = 10;
 enum LIBRAW_CRXTRACKS_MAXCOUNT = 16;
+enum LIBRAW_AFDATA_MAXCOUNT = 4;
 
 enum LIBRAW_AHD_TILE = 512;
 
-enum LibRaw_open_flags {
-	LIBRAW_OPEN_BIGFILE = 1,
-	LIBRAW_OPEN_FILE = 1<<1
+version (LIBRAW_NO_IOSTREAMS_DATASTREAM) {}
+else {
+	enum LibRaw_open_flags {
+		LIBRAW_OPEN_BIGFILE = 1,
+		LIBRAW_OPEN_FILE = 1<<1
+	}
 }
+
 
 enum LibRaw_openbayer_patterns {
 	RGGB = 0x94,
@@ -58,7 +75,8 @@ enum LibRaw_dngfields_marks {
 	PREVIEWCS = 1 << 11,
 	ASSHOTNEUTRAL = 1 << 12,
 	BASELINEEXPOSURE = 1 << 13,
-	LINEARRESPONSELIMIT = 1 << 14
+	LINEARRESPONSELIMIT = 1 << 14,
+  LIBRAW_DNGFM_USERCROP = 1 << 15,
 }
 
 enum LibRaw_As_Shot_WB_Applied_codes
@@ -182,17 +200,24 @@ enum LibRaw_dng_processing {
 	OTHER = 16,
 	_8BIT = 32,
 	/*LARGERANGE=64,*/ /* more than 16 bit integer */
-	ALL = FLOAT | LINEAR | XTRANS | _8BIT | OTHER /* |LARGERANGE */,
+	ALL = FLOAT | LINEAR | DEFLATE | XTRANS | _8BIT | OTHER /* |LARGERANGE */,
 	DEFAULT = FLOAT | LINEAR | DEFLATE | _8BIT
+}
+
+enum LibRaw_output_flags {
+    LIBRAW_OUTPUT_FLAGS_NONE = 0,
+    LIBRAW_OUTPUT_FLAGS_PPMMETA = 1
 }
 
 enum LibRaw_runtime_capabilities {
 	RAWSPEED = 1,
-	DNGSDK = 2,
-	GPRSDK = 4,
-	UNICODEPATHS = 8,
-	LIBRAW_CAPS_X3FTOOLS = 16,
-	LIBRAW_CAPS_RPI6BY9 = 32
+	DNGSDK = 1<<1,
+	GPRSDK = 1<<2,
+	UNICODEPATHS = 1<<3,
+	X3FTOOLS = 1<<4,
+	RPI6BY9 = 1<<5,
+  ZLIB = 1<<6,
+  JPEG = 1<<7
 }
 
 enum LibRaw_colorspace {
@@ -285,6 +310,13 @@ enum LibRaw_cameramaker_index {
 	YI,
 	Yuneec,
 	Zeiss,
+  OnePlus,
+  ISG,
+  VIVO,
+  HMD_Global,
+  HUAWEI,
+  RaspberryPi,
+  OmDigital,
 	TheLastOne
 }
 
@@ -317,6 +349,9 @@ enum LibRaw_camera_mounts {
 	Nikon_CX,       /* used in 'Nikon 1' series */
 	Nikon_F,
 	Nikon_Z,
+  PhaseOne_iXM_MV,
+  PhaseOne_iXM_RS,
+  PhaseOne_iXM,
 	Pentax_645,
 	Pentax_K,
 	Pentax_Q,
@@ -360,12 +395,19 @@ enum LibRaw_camera_formats {
 
 enum LibRawImageAspects {
 	UNKNOWN = 0,
-	_3to2 = 1,
-	_1to1 = 2,
-	_4to3 = 3,
-	_16to9 = 4,
-	_5to4 = 5,
-	OTHER = 6
+  OTHER = 1,
+  MINIMAL_REAL_ASPECT_VALUE = 99, /* 1:10*/
+  MAXIMAL_REAL_ASPECT_VALUE = 10000, /* 10: 1*/
+  // Value:  width / height * 1000
+  _3to2 =  (1000 * 3)/2,
+  _1to1 =  1000,
+  _4to3 =  (1000 * 4)/ 3,
+  _16to9 = (1000 * 16) / 9,
+  //6to6, // what is the difference with 1:1 ?
+  _5to4 = (1000 * 5) / 4,
+  _7to6 = (1000 * 7) / 6,
+  _6to5 = (1000 * 6) / 5,
+  _7to5 = (1000 * 7) / 5
 }
 
 enum LibRaw_lens_focal_types {
@@ -396,13 +438,60 @@ enum LibRaw_Canon_RecordModes {
 	TheLastOne
 }
 
+enum LibRaw_minolta_storagemethods
+{
+  UNPACKED = 0x52,
+  PACKED   = 0x59
+}
+
+enum LibRaw_minolta_bayerpatterns
+{
+  RGGB   = 0x01,
+  G2BRG1 = 0x04
+}
+
 enum LibRaw_sony_cameratypes {
 	DSC = 1,
 	DSLR = 2,
 	NEX = 3,
 	SLT = 4,
 	ILCE = 5,
-	ILCA = 6
+	ILCA = 6,
+	UNKNOWN = 0xffff
+}
+
+enum LibRaw_Sony_0x2010_Type {
+  Tag2010None = 0,
+  Tag2010a,
+  Tag2010b,
+  Tag2010c,
+  Tag2010d,
+  Tag2010e,
+  Tag2010f,
+  Tag2010g,
+  Tag2010h,
+  Tag2010i
+}
+
+enum LibRaw_Sony_0x9050_Type {
+  Tag9050None = 0,
+  Tag9050a,
+  Tag9050b,
+  Tag9050c
+}
+
+enum LIBRAW_SONY_FOCUSMODEmodes
+{
+  MF     = 0,
+  AF_S   = 2,
+  AF_C   = 3,
+  AF_A   = 4,
+  DMF    = 6,
+  AF_D   = 7,
+  AF           = 101,
+  PERMANENT_AF = 104,
+  SEMI_MF      = 105,
+  UNKNOWN      = -1
 }
 
 enum LibRaw_KodakSensors
@@ -433,37 +522,45 @@ enum LibRaw_HasselbladFormatCodes {
 	AdobeDNG_fromPhocusDNG
 }
 
+enum LibRaw_rawspecial_t
+{
+    SONYARW2_NONE = 0,
+    SONYARW2_BASEONLY = 1,
+    SONYARW2_DELTAONLY = 1 << 1,
+    SONYARW2_DELTAZEROBASE = 1 << 2,
+    SONYARW2_DELTATOVALUE = 1 << 3,
+    SONYARW2_ALLFLAGS =
+    SONYARW2_BASEONLY +
+    SONYARW2_DELTAONLY +
+    SONYARW2_DELTAZEROBASE +
+    SONYARW2_DELTATOVALUE,
+    NODP2Q_INTERPOLATERG = 1<<4,
+    NODP2Q_INTERPOLATEAF = 1 << 5,
+    SRAW_NO_RGB = 1 << 6,
+    SRAW_NO_INTERPOLATE = 1 << 7
+};
+
 enum LibRaw_processing_options {
-	SONYARW2_NONE = 0,
-	SONYARW2_BASEONLY = 1,
-	SONYARW2_DELTAONLY = 1 << 1,
-	SONYARW2_DELTAZEROBASE = 1 << 2,
-	SONYARW2_DELTATOVALUE = 1 << 3,
-	SONYARW2_ALLFLAGS = SONYARW2_BASEONLY + SONYARW2_DELTAONLY +
-		SONYARW2_DELTAZEROBASE + SONYARW2_DELTATOVALUE,
-	DP2Q_INTERPOLATERG = 1 << 4,
-	DP2Q_INTERPOLATEAF = 1 << 5,
-	PENTAX_PS_ALLFRAMES = 1 << 6,
-	CONVERTFLOAT_TO_INT = 1 << 7,
-	SRAW_NO_RGB = 1 << 8,
-	SRAW_NO_INTERPOLATE = 1 << 9,
-	LIBRAW_PROCESSING_ARQ_SKIP_CHANNEL_SWAP = 1 << 10,
-	NO_ROTATE_FOR_KODAK_THUMBNAILS = 1 << 11,
-	USE_DNG_DEFAULT_CROP = 1 << 12,
-	USE_PPM16_THUMBS = 1 << 13,
-	SKIP_MAKERNOTES = 1 << 14,
-	DONT_CHECK_DNG_ILLUMINANT = 1 << 15,
-	DNGSDK_ZEROCOPY = 1 << 16,
-	ZEROFILTERS_FOR_MONOCHROMETIFFS = 1 << 17,
-	DNG_ADD_ENHANCED = 1 << 18,
-	DNG_ADD_PREVIEWS = 1 << 19,
-	DNG_PREFER_LARGEST_IMAGE = 1 << 20,
-	DNG_STAGE2 = 1 << 21,
-	DNG_STAGE3 = 1 << 22,
-	DNG_ALLOWSIZECHANGE = 1 << 23,
-	DNG_DISABLEWBADJUST = 1 << 24,
-	PROVIDE_NONSTANDARD_WB = 1 << 25,
-	CAMERAWB_FALLBACK_TO_DAYLIGHT = 1 << 26
+  PENTAX_PS_ALLFRAMES = 1,
+  CONVERTFLOAT_TO_INT = 1 << 1,
+  ARQ_SKIP_CHANNEL_SWAP = 1 << 2,
+  NO_ROTATE_FOR_KODAK_THUMBNAILS = 1 << 3,
+// USE_DNG_DEFAULT_CROP = 1 << 4,
+  USE_PPM16_THUMBS = 1 << 5,
+  DONT_CHECK_DNG_ILLUMINANT = 1 << 6,
+  DNGSDK_ZEROCOPY = 1 << 7,
+  ZEROFILTERS_FOR_MONOCHROMETIFFS = 1 << 8,
+  DNG_ADD_ENHANCED = 1 << 9,
+  DNG_ADD_PREVIEWS = 1 << 10,
+  DNG_PREFER_LARGEST_IMAGE = 1 << 11,
+  DNG_STAGE2 = 1 << 12,
+  DNG_STAGE3 = 1 << 13,
+  DNG_ALLOWSIZECHANGE = 1 << 14,
+  DNG_DISABLEWBADJUST = 1 << 15,
+  PROVIDE_NONSTANDARD_WB = 1 << 16,
+  CAMERAWB_FALLBACK_TO_DAYLIGHT = 1 << 17,
+  CHECK_THUMBNAILS_KNOWN_VENDORS = 1 << 18,
+  CHECK_THUMBNAILS_ALL_VENDORS = 1 << 19
 }
 
 enum LibRaw_decoder_flags {
@@ -592,7 +689,8 @@ enum LibRaw_thumbnail_formats {
 	BITMAP = 2,
 	BITMAP16 = 3,
 	LAYER = 4,
-	ROLLEI = 5
+	ROLLEI = 5,
+  H265 = 6
 }
 
 enum LibRaw_image_formats {
