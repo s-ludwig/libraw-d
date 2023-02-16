@@ -13,6 +13,15 @@ sourceFiles "lib/windows-x86_64/libraw.lib" platform="windows-x86_64"
 # macOS amd64
 lflags "-L${PACKAGE_DIR}/lib/macos-x86_64" platform="osx-x86_64"
 libs "raw_r" "c++" platform="osx-x86_64"
+# macOS arm64
+lflags "-L${PACKAGE_DIR}/lib/macos-arm64" platform="osx-aarch64"
+libs "raw_r" "c++" platform="osx-aarch64"
+# iOS arm64
+lflags "-L${PACKAGE_DIR}/lib/ios-arm64" platform="ios-aarch64"
+libs "raw_r" "c++" platform="ios-aarch64"
+# iOS-simulator x86_64
+lflags "-L${PACKAGE_DIR}/lib/ios-simulator-x86_64" platform="ios-x86_64"
+libs "raw_r" "c++" platform="ios-x86_64"
 # Linux amd64
 lflags "-L${PACKAGE_DIR}/lib/linux-x86_64" platform="linux-x86_64"
 libs "raw_r" "stdc++" platform="linux-x86_64"
