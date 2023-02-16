@@ -36,6 +36,7 @@ extern (C) {
 	void libraw_wrap_ifp_stream(void *ifp, libraw_abstract_datastream_t *dst);
 	int libraw_unpack(libraw_data_t *);
 	int libraw_unpack_thumb(libraw_data_t *);
+	int libraw_unpack_thumb_ex(libraw_data_t *,int);
 	void libraw_recycle_datastream(libraw_data_t *);
 	void libraw_recycle(libraw_data_t *);
 	void libraw_close(libraw_data_t *);
@@ -50,7 +51,6 @@ extern (C) {
 	int libraw_cameraCount();
 
 	/* helpers */
-	void libraw_set_memerror_handler(libraw_data_t *, memory_callback cb, void *datap);
 	void libraw_set_exifparser_handler(libraw_data_t *, exif_parser_callback cb, void *datap);
 	void libraw_set_dataerror_handler(libraw_data_t *, data_callback func, void *datap);
 	void libraw_set_progress_handler(libraw_data_t *, progress_callback cb, void *datap);
@@ -114,6 +114,7 @@ extern (C) {
 		final void recycle_datastream();
 		final int unpack();
 		final int unpack_thumb();
+		final int unpack_thumb_ex(int);
 		final int thumbOK(long maxsz = -1);
 		final int adjust_sizes_info_only();
 		final int subtract_black();
@@ -127,11 +128,6 @@ extern (C) {
 		{
 			callbacks.exifparser_data = data;
 			callbacks.exif_cb = cb;
-		}
-		final void set_memerror_handler(memory_callback cb, void *data)
-		{
-			callbacks.memcb_data = data;
-			callbacks.mem_cb = cb;
 		}
 		final void set_dataerror_handler(data_callback func, void *data)
 		{
@@ -254,7 +250,6 @@ extern (C) {
 		final void *calloc(size_t n, size_t t);
 		final void *realloc(void *p, size_t s);
 		final void free(void *p);
-		final void merror(void *ptr, const(char)* where);
 		final void derror();
 
 		LibRaw_TLS tls;
@@ -267,10 +262,10 @@ extern (C) {
 
 		LibRaw_constants rgb_constants;
 
-		void function(LibRaw) write_thumb;
+		//void function(LibRaw) write_thumb;
 		void function(LibRaw) write_fun;
 		void function(LibRaw) load_raw;
-		void function(LibRaw) thumb_load_raw;
+		//void function(LibRaw) thumb_load_raw;
 		void function(LibRaw) pentax_component_load_raw;
 
 		final void kodak_thumb_loader();
@@ -320,11 +315,13 @@ extern (C) {
 		final void stretch();
 
 		final void jpeg_thumb_writer(/*FILE*/void *tfp, char *thumb, int thumb_length);
+		version (none) {
 		final void jpeg_thumb();
 		final void ppm_thumb();
 		final void ppm16_thumb();
 		final void layer_thumb();
 		final void rollei_thumb();
+		}
 		final void kodak_thumb_load_raw();
 
 		final uint get4();
@@ -336,6 +333,7 @@ extern (C) {
 		/* RawSpeed data */
 		void *_rawspeed_camerameta;
 		void *_rawspeed_decoder;
+		void *_rawspeed3_handle;
 		final void fix_after_rawspeed(int bl);
 		final int try_rawspeed(); /* returns LIBRAW_SUCCESS on success */
 		/* Fast cancel flag */

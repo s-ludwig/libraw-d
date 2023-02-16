@@ -37,8 +37,6 @@ extern (C)
 	alias memory_callback = void function(void *data, const char *file, const char *where);
 	alias exif_parser_callback = void function(void *context, int tag, int type, int len, uint ord, void *ifp, long base);
 
-	void default_memory_callback(void *data, const char *file, const char *where);
-
 	alias data_callback = void function(void *data, const char *file, const int offset);
 
 	void default_data_callback(void *data, const char *file, const int offset);
@@ -49,9 +47,6 @@ extern (C)
 	alias process_step_callback = void function(void *ctx);
 
 	struct libraw_callbacks_t {
-		memory_callback mem_cb;
-		void *memcb_data;
-
 		data_callback data_cb;
 		void *datacb_data;
 
@@ -211,7 +206,7 @@ extern (C)
 		    7 = CRAW         130 = Normal Movie, CRM LightRaw
 		  131 = CRM  StandardRaw */
 		short Quality;
-		/* Increases dynamic range of sensor data
+		/* data compression curve
 		    0 = OFF  1 = CLogV1 2 = CLogV2? 3 = CLogV3 */
 		int CanonLog;
 
@@ -386,6 +381,8 @@ extern (C)
 	 8: Small raw
 	 9: Packed 12-bit
 	10: Packed 14-bit
+	13: High Efficiency  (HE)
+	14: High Efficiency* (HE*)
 */
 		ushort NEFCompression;
 
@@ -606,6 +603,11 @@ extern (C)
 		                           1 for uncompressed;
 		                           2 lossless compressed raw v.2
 		                        */
+		ushort RawSizeType;     /* init in 0xffff
+		                           1 - large,
+		                           2 - small,
+		                           3 - medium
+		                        */
 		uint Quality;           /* init in 0xffffffff
 		                           0 or 6 for raw, 7 or 8 for compressed raw */
 		ushort FileFormat;      /*  1000 SR2
@@ -673,7 +675,7 @@ extern (C)
 		float[5][64] WBCT_Coeffs; /* CCT, than R, G1, B, G2 coeffs */
 		int as_shot_wb_applied;
 		libraw_P1_color_t[2] P1_color;
-		uint raw_bps; /* for Phase One, raw format */
+		uint raw_bps; /* for Phase One: raw format; For other cameras: bits per pixel (copy of tiff_bps in most cases) */
 											/* Phase One raw format values, makernotes tag 0x010e:
 											0    Name unknown
 											1    "RAW 1"
@@ -694,6 +696,19 @@ extern (C)
 		uint tlength;
 		int tcolors;
 		char *thumb;
+	}
+
+	struct libraw_thumbnail_item_t {
+		LibRaw_internal_thumbnail_formats tformat;
+		ushort twidth, theight, tflip;
+		uint tlength;
+		uint tmisc;
+		long toffset;
+	}
+
+	struct libraw_thumbnail_list_t {
+		int thumbcount;
+		libraw_thumbnail_item_t[LIBRAW_THUMBNAIL_MAXCOUNT] thumblist;
 	}
 
 	struct libraw_gps_info_t {
@@ -940,6 +955,7 @@ extern (C)
 		libraw_colordata_t color;
 		libraw_imgother_t other;
 		libraw_thumbnail_t thumbnail;
+		libraw_thumbnail_list_t thumbs_list;
 		libraw_rawdata_t rawdata;
 		void *parent_class;
 	}
@@ -993,7 +1009,7 @@ enum LibRawBigEndian = std.system.endian == std.system.Endian.bigEndian;
 version (Win64) {
 	static assert(libraw_decoder_info_t.sizeof == 16);
 	static assert(libraw_internal_output_params_t.sizeof == 16);
-	static assert(libraw_callbacks_t.sizeof == 152);
+	static assert(libraw_callbacks_t.sizeof == 136);
 	static assert(libraw_abstract_datastream_t.sizeof == 88);
 	static assert(libraw_processed_image_t.sizeof == 20);
 	static assert(libraw_iparams_t.sizeof == 440);
@@ -1033,7 +1049,7 @@ version (Win64) {
 	static assert(libraw_makernotes_t.sizeof == 2952);
 	static assert(libraw_shootinginfo_t.sizeof == 142);
 	static assert(libraw_custom_camera_t.sizeof == 52);
-	static assert(libraw_data_t.sizeof == 380992);
+	static assert(libraw_data_t.sizeof == 381256);
 	static assert(fuji_q_table.sizeof == 32);
 	static assert(fuji_compressed_params.sizeof == 152);
 }

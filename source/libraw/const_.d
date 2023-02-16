@@ -1,7 +1,7 @@
 module libraw.const_;
 
-enum LIBRAW_DEFAULT_ADJUST_MAXIMUM_THRESHOLD = 0.75;
-enum LIBRAW_DEFAULT_AUTO_BRIGHTNESS_THRESHOLD = 0.01;
+enum LIBRAW_DEFAULT_ADJUST_MAXIMUM_THRESHOLD = 0.75f;
+enum LIBRAW_DEFAULT_AUTO_BRIGHTNESS_THRESHOLD = 0.01f;
 
 static if (!is(typeof(LIBRAW_MAX_ALLOC_MB_DEFAULT))) {
 	enum LIBRAW_MAX_ALLOC_MB_DEFAULT = 2048L;
@@ -39,6 +39,7 @@ else version = LIBRAW_MEMPOOL_CHECK;
 enum LIBRAW_MAX_METADATA_BLOCKS = 1024;
 enum LIBRAW_CBLACK_SIZE = 4104;
 enum LIBRAW_IFD_MAXCOUNT = 10;
+enum LIBRAW_THUMBNAIL_MAXCOUNT = 8;
 enum LIBRAW_CRXTRACKS_MAXCOUNT = 16;
 enum LIBRAW_AFDATA_MAXCOUNT = 4;
 
@@ -76,7 +77,9 @@ enum LibRaw_dngfields_marks {
 	ASSHOTNEUTRAL = 1 << 12,
 	BASELINEEXPOSURE = 1 << 13,
 	LINEARRESPONSELIMIT = 1 << 14,
-  LIBRAW_DNGFM_USERCROP = 1 << 15,
+	USERCROP = 1 << 15,
+	OPCODE1 = 1 << 16,
+	OPCODE3 = 1 << 17,
 }
 
 enum LibRaw_As_Shot_WB_Applied_codes
@@ -216,8 +219,10 @@ enum LibRaw_runtime_capabilities {
 	UNICODEPATHS = 1<<3,
 	X3FTOOLS = 1<<4,
 	RPI6BY9 = 1<<5,
-  ZLIB = 1<<6,
-  JPEG = 1<<7
+	ZLIB = 1<<6,
+	JPEG = 1<<7,
+	RAWSPEED3 = 1<<8,
+	RAWSPEED_BITS = 1<<9,
 }
 
 enum LibRaw_colorspace {
@@ -540,6 +545,17 @@ enum LibRaw_rawspecial_t
     SRAW_NO_INTERPOLATE = 1 << 7
 };
 
+enum LibRaw_rawspeed_bits_t
+{
+    V1_USE = 1,
+    V1_FAILONUNKNOWN = 1 << 1,
+    V1_IGNOREERRORS = 1 << 2,
+    /*  bits 3-7 are reserved*/
+    V3_USE = 1 << 8,
+    V3_FAILONUNKNOWN = 1 << 9,
+    V3_IGNOREERRORS = 1 << 10,
+}
+
 enum LibRaw_processing_options {
   PENTAX_PS_ALLFRAMES = 1,
   CONVERTFLOAT_TO_INT = 1 << 1,
@@ -560,7 +576,11 @@ enum LibRaw_processing_options {
   PROVIDE_NONSTANDARD_WB = 1 << 16,
   CAMERAWB_FALLBACK_TO_DAYLIGHT = 1 << 17,
   CHECK_THUMBNAILS_KNOWN_VENDORS = 1 << 18,
-  CHECK_THUMBNAILS_ALL_VENDORS = 1 << 19
+  CHECK_THUMBNAILS_ALL_VENDORS = 1 << 19,
+  DNG_STAGE2_IFPRESENT = 1 << 20,
+  DNG_STAGE3_IFPRESENT = 1 << 21,
+  DNG_ADD_MASKS = 1 << 22,
+  CANON_IGNORE_MAKERNOTES_ROTATION = 1 << 23
 }
 
 enum LibRaw_decoder_flags {
@@ -575,15 +595,16 @@ enum LibRaw_decoder_flags {
 	SINAR4SHOT = 1 << 11,
 	FLATDATA = 1 << 12,
 	FLAT_BG2_SWAPPED = 1<<13,
-	NOTSET = 1 << 15
+	UNSUPPORTED_FORMAT = 1 << 14,
+	NOTSET = 1 << 15,
+	TRYRAWSPEED3 = 1 << 16
 }
 
 enum LIBRAW_XTRANS = 9;
 
 enum LibRaw_constructor_flags {
 	NONE = 0,
-	NO_MEMERR_CALLBACK = 1,
-	NO_DATAERR_CALLBACK = 1 << 1
+	NO_DATAERR_CALLBACK = 1 << 1,
 }
 
 enum LibRaw_warnings {
@@ -607,6 +628,10 @@ enum LibRaw_warnings {
 	DNG_IMAGES_REORDERED = 1 << 18,
 	DNG_STAGE2_APPLIED = 1 << 19,
 	DNG_STAGE3_APPLIED = 1 << 20,
+	RAWSPEED3_PROBLEM = 1 << 21,
+	RAWSPEED3_UNSUPPORTED = 1 << 22,
+	RAWSPEED3_PROCESSED = 1 << 23,
+	RAWSPEED3_NOTLISTED = 1 << 24
 }
 
 enum LibRaw_exceptions {
@@ -621,7 +646,8 @@ enum LibRaw_exceptions {
 	IO_BADFILE = 8,
 	DECODE_JPEG2000 = 9,
 	TOOBIG = 10,
-	MEMPOOL = 11
+	MEMPOOL = 11,
+	UNSUPPORTED_FORMAT = 12
 }
 
 enum LibRaw_progress {
@@ -672,6 +698,7 @@ enum LibRaw_errors {
 	UNSUPPORTED_THUMBNAIL = -6,
 	INPUT_CLOSED = -7,
 	NOT_IMPLEMENTED = -8,
+	REQUEST_FOR_NONEXISTENT_THUMBNAIL = -9,
 	UNSUFFICIENT_MEMORY = -100007,
 	DATA_ERROR = -100008,
 	IO_ERROR = -100009,
@@ -683,6 +710,20 @@ enum LibRaw_errors {
 
 auto LIBRAW_FATAL_ERROR(E)(E ec) { return ec < -100000; }
 
+enum LibRaw_internal_thumbnail_formats
+{
+	UNKNOWN = 0,
+	KODAK_THUMB = 1,
+	KODAK_YCBCR = 2,
+	KODAK_RGB = 3,
+	JPEG = 4,
+	LAYER,
+	ROLLEI,
+	PPM,
+	PPM16,
+	X3F,
+}
+
 enum LibRaw_thumbnail_formats {
 	UNKNOWN = 0,
 	JPEG = 1,
@@ -690,7 +731,7 @@ enum LibRaw_thumbnail_formats {
 	BITMAP16 = 3,
 	LAYER = 4,
 	ROLLEI = 5,
-  H265 = 6
+	H265 = 6
 }
 
 enum LibRaw_image_formats {
