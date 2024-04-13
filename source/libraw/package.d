@@ -58,6 +58,7 @@ extern (C) {
 	int libraw_get_decoder_info(libraw_data_t *lr, libraw_decoder_info_t *d);
 	int libraw_COLOR(libraw_data_t *, int row, int col);
 	uint libraw_capabilities();
+	int libraw_adjust_to_raw_inset_crop(libraw_data_t *lr, uint mask, float maxcrop);
 
 	/* DCRAW compatibility */
 	int libraw_adjust_sizes_info_only(libraw_data_t *);

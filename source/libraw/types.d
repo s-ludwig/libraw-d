@@ -269,6 +269,8 @@ extern (C)
 		ushort DRangePriority;
 		ushort DRangePriorityAuto;
 		ushort DRangePriorityFixed;
+		char[32 + 1] FujiModel;
+		char[32 + 1] FujiModel2;
 
 		/*
 		tag 0x9200, converted to BrightnessCompensation
@@ -406,6 +408,9 @@ extern (C)
 		ushort SensorWidth;
 		ushort SensorHeight;
 		ushort Active_D_Lighting;
+		uint PictureControlVersion;
+		char[20] PictureControlName;
+		char[20] PictureControlBase;
 		uint ShotInfoVersion;
 		short MakernotesFlip;
 		double RollAngle;  // positive is clockwise, CW
@@ -565,6 +570,9 @@ extern (C)
 		ushort[2] HDR;
 		ushort   group2010;
 		ushort   group9050;
+
+		ushort   len_group9050; // currently, for debugging only
+
 		ushort   real_iso_offset;                 // init in 0xffff
 		ushort   MeteringMode_offset;
 		ushort   ExposureProgram_offset;
@@ -621,8 +629,10 @@ extern (C)
 		                            3330 ARW 2.3.3
 		                            3350 ARW 2.3.5
 		                            4000 ARW 4.0
+	                                4010 ARW 4.0.1
 		                         */
 		char[16] MetaVersion;
+		float AspectRatio;
 	}
 
 	struct libraw_colordata_t {
@@ -798,6 +808,7 @@ extern (C)
 		float adjust_maximum_thr;
 		int no_auto_bright;    /* -W */
 		int use_fuji_rotate;   /* -j */
+		int use_p1_correction;
 		int green_matching;
 		/* DCB parameters */
 		int dcb_iterations;
@@ -1022,9 +1033,9 @@ version (Win64) {
 	static assert(libraw_P1_color_t.sizeof == 36);
 	static assert(libraw_canon_makernotes_t.sizeof == 168);
 	static assert(libraw_hasselblad_makernotes_t.sizeof == 384);
-	static assert(libraw_fuji_info_t.sizeof == 280);
+	static assert(libraw_fuji_info_t.sizeof == 348);
 	static assert(libraw_sensor_highspeed_crop_t.sizeof == 8);
-	static assert(libraw_nikon_makernotes_t.sizeof == 224);
+	static assert(libraw_nikon_makernotes_t.sizeof == 264);
 	static assert(libraw_olympus_makernotes_t.sizeof == 408);
 	static assert(libraw_panasonic_makernotes_t.sizeof == 68);
 	static assert(libraw_pentax_makernotes_t.sizeof == 32);
@@ -1032,7 +1043,7 @@ version (Win64) {
 	static assert(libraw_samsung_makernotes_t.sizeof == 136);
 	static assert(libraw_kodak_makernotes_t.sizeof == 244);
 	static assert(libraw_p1_makernotes_t.sizeof == 448);
-	static assert(libraw_sony_info_t.sizeof == 180);
+	static assert(libraw_sony_info_t.sizeof == 184);
 	static assert(libraw_colordata_t.sizeof == 187032);
 	static assert(libraw_thumbnail_t.sizeof == 24);
 	static assert(libraw_gps_info_t.sizeof == 48);
@@ -1046,10 +1057,10 @@ version (Win64) {
 	static assert(libraw_nikonlens_t.sizeof == 8);
 	static assert(libraw_dnglens_t.sizeof == 16);
 	static assert(libraw_lensinfo_t.sizeof == 1296);
-	static assert(libraw_makernotes_t.sizeof == 2952);
+	static assert(libraw_makernotes_t.sizeof == 3064);
 	static assert(libraw_shootinginfo_t.sizeof == 142);
 	static assert(libraw_custom_camera_t.sizeof == 52);
-	static assert(libraw_data_t.sizeof == 381256);
+	static assert(libraw_data_t.sizeof == 381368);
 	static assert(fuji_q_table.sizeof == 32);
 	static assert(fuji_compressed_params.sizeof == 152);
 }

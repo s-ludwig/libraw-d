@@ -25,3 +25,6 @@ libs "raw_r" "c++" platform="ios-x86_64"
 # Linux amd64
 lflags "-L${PACKAGE_DIR}/lib/linux-x86_64" platform="linux-x86_64"
 libs "raw_r" "stdc++" platform="linux-x86_64"
+# Android arm64
+lflags "${PACKAGE_DIR}/lib/android-arm64/libraw_r.a" platform="android-aarch64"
+libs "stdc++" platform="android-aarch64"
