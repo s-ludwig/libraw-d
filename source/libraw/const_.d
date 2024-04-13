@@ -88,7 +88,8 @@ enum LibRaw_As_Shot_WB_Applied_codes
 	CANON = 2,
 	NIKON = 4,
 	NIKON_SRAW = 8,
-	PENTAX = 16
+	PENTAX = 16,
+	SONY = 32
 }
 
 //#define tagtypeIs(typex) (type == typex)
@@ -239,6 +240,7 @@ enum LibRaw_colorspace {
 	CameraGamma,
 	MonochromeLinear,
 	MonochromeGamma,
+	Rec2020,
 	Unknown = 255
 }
 
@@ -482,7 +484,8 @@ enum LibRaw_Sony_0x9050_Type {
   Tag9050None = 0,
   Tag9050a,
   Tag9050b,
-  Tag9050c
+  Tag9050c,
+  Tag9050d
 }
 
 enum LIBRAW_SONY_FOCUSMODEmodes
@@ -580,7 +583,8 @@ enum LibRaw_processing_options {
   DNG_STAGE2_IFPRESENT = 1 << 20,
   DNG_STAGE3_IFPRESENT = 1 << 21,
   DNG_ADD_MASKS = 1 << 22,
-  CANON_IGNORE_MAKERNOTES_ROTATION = 1 << 23
+  CANON_IGNORE_MAKERNOTES_ROTATION = 1 << 23,
+  ALLOW_JPEGXL_PREVIEWS = 1 << 24
 }
 
 enum LibRaw_decoder_flags {
@@ -631,7 +635,8 @@ enum LibRaw_warnings {
 	RAWSPEED3_PROBLEM = 1 << 21,
 	RAWSPEED3_UNSUPPORTED = 1 << 22,
 	RAWSPEED3_PROCESSED = 1 << 23,
-	RAWSPEED3_NOTLISTED = 1 << 24
+	RAWSPEED3_NOTLISTED = 1 << 24,
+	VENDOR_CROP_SUGGESTED = 1 << 25
 }
 
 enum LibRaw_exceptions {
@@ -722,6 +727,8 @@ enum LibRaw_internal_thumbnail_formats
 	PPM,
 	PPM16,
 	X3F,
+	DNG_YCBCR,
+	JPEGXL
 }
 
 enum LibRaw_thumbnail_formats {
@@ -731,7 +738,8 @@ enum LibRaw_thumbnail_formats {
 	BITMAP16 = 3,
 	LAYER = 4,
 	ROLLEI = 5,
-	H265 = 6
+	H265 = 6,
+	JPEGXL = 7
 }
 
 enum LibRaw_image_formats {
