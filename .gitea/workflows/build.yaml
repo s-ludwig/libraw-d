@@ -43,6 +43,17 @@ jobs:
         shell: bash
         run: dub -a x86_64 --compiler ldc2 --single test.d
 
+  ubuntu-arm64:
+    runs-on: [ubuntu-baseline, arm64]
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: Test
+        shell: bash
+        run: dub -a aarch64-linux-gnu --compiler ldc2 --single test.d
+
   macos-x86_64:
     runs-on: [macos]
     steps:
