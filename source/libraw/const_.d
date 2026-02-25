@@ -9,14 +9,18 @@ static if (!is(typeof(LIBRAW_MAX_ALLOC_MB_DEFAULT))) {
 
 
 static if (!is(typeof(LIBRAW_MAX_NONDNG_RAW_FILE_SIZE))) {
-	enum LIBRAW_MAX_NONDNG_RAW_FILE_SIZE = 2147483647UL;
+	enum LIBRAW_MAX_NONDNG_RAW_FILE_SIZE = 2147483647L;
+}
+
+static if (!is(typeof(LIBRAW_MAX_CR3_RAW_FILE_SIZE))) {
+	enum LIBRAW_MAX_CR3_RAW_FILE_SIZE = LIBRAW_MAX_NONDNG_RAW_FILE_SIZE;
 }
 
 static if (!is(typeof(LIBRAW_MAX_DNG_RAW_FILE_SIZE))) {
 version (USE_DNGSDK)
-	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 4294967295UL;
+	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 4294967295L;
 else
-	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 2147483647UL;
+	enum LIBRAW_MAX_DNG_RAW_FILE_SIZE = 2147483647L;
 }
 
 static if (!is(typeof(LIBRAW_MAX_THUMBNAIL_MB_DEFAULT))) {
@@ -32,6 +36,12 @@ else version = LIBRAW_IOSPACE_CHECK;
 
 version (LIBRAW_NO_CR3_MEMPOOL) {}
 else version = LIBRAW_CR3_MEMPOOL;
+
+version (OSX) {}
+else version (iOS) {}
+else version (Windows) {}
+else version (LIBRAW_SYSTEM_SWAB) {}
+else version = LIBRAW_OWN_SWAB;
 
 version (LIBRAW_NO_MEMPOOL_CHECK) {}
 else version = LIBRAW_MEMPOOL_CHECK;
@@ -564,7 +574,6 @@ enum LibRaw_processing_options {
   CONVERTFLOAT_TO_INT = 1 << 1,
   ARQ_SKIP_CHANNEL_SWAP = 1 << 2,
   NO_ROTATE_FOR_KODAK_THUMBNAILS = 1 << 3,
-// USE_DNG_DEFAULT_CROP = 1 << 4,
   USE_PPM16_THUMBS = 1 << 5,
   DONT_CHECK_DNG_ILLUMINANT = 1 << 6,
   DNGSDK_ZEROCOPY = 1 << 7,
@@ -584,7 +593,9 @@ enum LibRaw_processing_options {
   DNG_STAGE3_IFPRESENT = 1 << 21,
   DNG_ADD_MASKS = 1 << 22,
   CANON_IGNORE_MAKERNOTES_ROTATION = 1 << 23,
-  ALLOW_JPEGXL_PREVIEWS = 1 << 24
+  ALLOW_JPEGXL_PREVIEWS = 1 << 24,
+  CANON_CHECK_CAMERA_AUTO_ROTATION_MODE = 1 << 26,
+  DNG_STAGE23_IFPRESENT_JPGJXL = 1 << 27
 }
 
 enum LibRaw_decoder_flags {
@@ -636,7 +647,9 @@ enum LibRaw_warnings {
 	RAWSPEED3_UNSUPPORTED = 1 << 22,
 	RAWSPEED3_PROCESSED = 1 << 23,
 	RAWSPEED3_NOTLISTED = 1 << 24,
-	VENDOR_CROP_SUGGESTED = 1 << 25
+	VENDOR_CROP_SUGGESTED = 1 << 25,
+	DNG_NOT_PROCESSED = 1 << 26,
+  DNG_NOT_PARSED = 1 << 27
 }
 
 enum LibRaw_exceptions {
@@ -744,5 +757,7 @@ enum LibRaw_thumbnail_formats {
 
 enum LibRaw_image_formats {
 	JPEG = 1,
-	BITMAP = 2
+	BITMAP = 2,
+  JPEGXL = 3,
+  H265 = 4
 }

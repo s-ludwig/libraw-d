@@ -37,9 +37,9 @@ extern (C)
 	alias memory_callback = void function(void *data, const char *file, const char *where);
 	alias exif_parser_callback = void function(void *context, int tag, int type, int len, uint ord, void *ifp, long base);
 
-	alias data_callback = void function(void *data, const char *file, const int offset);
+	alias data_callback = void function(void *data, const char *file, const long offset);
 
-	void default_data_callback(void *data, const char *file, const int offset);
+	void default_data_callback(void *data, const char *file, const long offset);
 
 	alias progress_callback = int function(void *data, LibRaw_progress stage, int iteration, int expected);
 	alias pre_identify_callback = int function(void *ctx);
@@ -48,13 +48,13 @@ extern (C)
 
 	struct libraw_callbacks_t {
 		data_callback data_cb;
-		void *datacb_data;
+		void* datacb_data;
 
 		progress_callback progress_cb;
-		void *progresscb_data;
+		void* progresscb_data;
 
-		exif_parser_callback exif_cb;
-		void *exifparser_data;
+		exif_parser_callback exif_cb, makernotes_cb;
+		void* exifparser_data, makernotesparser_data;
 		pre_identify_callback pre_identify_cb;
 		post_identify_callback post_identify_cb;
 		process_step_callback pre_subtractblack_cb, pre_scalecolors_cb, pre_preinterpolate_cb, pre_interpolate_cb,
@@ -139,6 +139,11 @@ extern (C)
 		float[4][3] forwardmatrix;
 	}
 
+	struct libraw_dng_rawopcode_t {
+		uint len;
+		void *data;
+	}
+
 	struct libraw_dng_levels_t {
 		uint parsedfields;
 		uint[LIBRAW_CBLACK_SIZE] dng_cblack;
@@ -153,6 +158,7 @@ extern (C)
 		float[4] asshotneutral;
 		float baseline_exposure;
 		float LinearResponseLimit;
+		libraw_dng_rawopcode_t[3] rawopcodes;
 	}
 
 	struct libraw_P1_color_t {
@@ -193,6 +199,7 @@ extern (C)
 		int   AFMicroAdjMode;
 		float AFMicroAdjValue;
 		short MakernotesFlip;
+		short AutoRotateMode;
 		short RecordMode;
 		short SRAWQuality;
 		uint wbi;
@@ -412,6 +419,14 @@ extern (C)
 		char[20] PictureControlName;
 		char[20] PictureControlBase;
 		uint ShotInfoVersion;
+		char[9] ShotInfoFirmware;
+
+		uint BurstTable_0x0056_len;
+		ubyte* BurstTable_0x0056;
+		ushort BurstTable_0x0056_ver;
+		ushort BurstTable_0x0056_gid;
+		ubyte BurstTable_0x0056_fnum;
+
 		short MakernotesFlip;
 		double RollAngle;  // positive is clockwise, CW
 		double PitchAngle; // positive is upwords
@@ -421,6 +436,8 @@ extern (C)
 	struct libraw_olympus_makernotes_t {
 		char[6]  CameraType2;
 		ushort   ValidBits;
+		uint tagX640, tagX641, tagX642, tagX643, tagX644, tagX645, tagX646, tagX647,
+			tagX648, tagX649, tagX650, tagX651, tagX652, tagX653;
 		int[2]   SensorCalibration;
 		ushort[5] DriveMode;
 		ushort   ColorSpace;
@@ -474,6 +491,7 @@ extern (C)
 		int      AFPointsInFocus_version;
 		uint     AFPointsInFocus;
 		ushort   FocusPosition;
+		ubyte[4] DynamicRangeExpansion;
 		short    AFAdjustment;
 		ubyte    AFPointMode;
 		ubyte    MultiExposure; /* last bit is not "1" if ME is not used */
@@ -656,7 +674,7 @@ extern (C)
 // Sony
 // and aliases of the above
 // DNG
-		c_long[4] linear_max;
+		uint[4] linear_max;
 
 		float fmaximum;
 		float fnorm;
@@ -1017,10 +1035,10 @@ enum LibRawBigEndian = std.system.endian == std.system.Endian.bigEndian;
 
 
 // sanity check struct sizes to match the C/C++ side
-version (Win64) {
+version (linux) {
 	static assert(libraw_decoder_info_t.sizeof == 16);
 	static assert(libraw_internal_output_params_t.sizeof == 16);
-	static assert(libraw_callbacks_t.sizeof == 136);
+	static assert(libraw_callbacks_t.sizeof == 152);
 	static assert(libraw_abstract_datastream_t.sizeof == 88);
 	static assert(libraw_processed_image_t.sizeof == 20);
 	static assert(libraw_iparams_t.sizeof == 440);
@@ -1029,22 +1047,23 @@ version (Win64) {
 	static assert(libraw_area_t.sizeof == 8);
 	static assert(ph1_t.sizeof == 36);
 	static assert(libraw_dng_color_t.sizeof == 168);
-	static assert(libraw_dng_levels_t.sizeof == 32928);
+	static assert(libraw_dng_rawopcode_t.sizeof == 16);
+	static assert(libraw_dng_levels_t.sizeof == 32976);
 	static assert(libraw_P1_color_t.sizeof == 36);
 	static assert(libraw_canon_makernotes_t.sizeof == 168);
 	static assert(libraw_hasselblad_makernotes_t.sizeof == 384);
 	static assert(libraw_fuji_info_t.sizeof == 348);
 	static assert(libraw_sensor_highspeed_crop_t.sizeof == 8);
-	static assert(libraw_nikon_makernotes_t.sizeof == 264);
-	static assert(libraw_olympus_makernotes_t.sizeof == 408);
+	static assert(libraw_nikon_makernotes_t.sizeof == 296);
+	static assert(libraw_olympus_makernotes_t.sizeof == 464);
 	static assert(libraw_panasonic_makernotes_t.sizeof == 68);
-	static assert(libraw_pentax_makernotes_t.sizeof == 32);
+	static assert(libraw_pentax_makernotes_t.sizeof == 36);
 	static assert(libraw_ricoh_makernotes_t.sizeof == 72);
 	static assert(libraw_samsung_makernotes_t.sizeof == 136);
 	static assert(libraw_kodak_makernotes_t.sizeof == 244);
 	static assert(libraw_p1_makernotes_t.sizeof == 448);
 	static assert(libraw_sony_info_t.sizeof == 184);
-	static assert(libraw_colordata_t.sizeof == 187032);
+	static assert(libraw_colordata_t.sizeof == 187088);
 	static assert(libraw_thumbnail_t.sizeof == 24);
 	static assert(libraw_gps_info_t.sizeof == 48);
 	static assert(libraw_imgother_t.sizeof == 800);
@@ -1052,15 +1071,15 @@ version (Win64) {
 	static assert(libraw_metadata_common_t.sizeof == 304);
 	static assert(libraw_output_params_t.sizeof == 304);
 	static assert(libraw_raw_unpack_params_t.sizeof == 48);
-	static assert(libraw_rawdata_t.sizeof == 187744);
+	static assert(libraw_rawdata_t.sizeof == 187800);
 	static assert(libraw_makernotes_lens_t.sizeof == 736);
 	static assert(libraw_nikonlens_t.sizeof == 8);
 	static assert(libraw_dnglens_t.sizeof == 16);
 	static assert(libraw_lensinfo_t.sizeof == 1296);
-	static assert(libraw_makernotes_t.sizeof == 3064);
+	static assert(libraw_makernotes_t.sizeof == 3160);
 	static assert(libraw_shootinginfo_t.sizeof == 142);
 	static assert(libraw_custom_camera_t.sizeof == 52);
-	static assert(libraw_data_t.sizeof == 381368);
+	static assert(libraw_data_t.sizeof == 381576);
 	static assert(fuji_q_table.sizeof == 32);
 	static assert(fuji_compressed_params.sizeof == 152);
 }
